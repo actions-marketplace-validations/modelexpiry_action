@@ -1,0 +1,55 @@
+name: ModelExpiry
+description: Fail pull requests that add an AI model ID its provider is retiring, with annotations, a job summary and SARIF.
+author: ModelExpiry
+branding:
+  icon: clock
+  color: orange
+
+# Runs `npx modelexpiry ci` on the runner: the code never leaves it, and the only request
+# is a download of https://modelexpiry.com/registry.json. https://modelexpiry.com
+inputs:
+  fail-on:
+    description: "When the job fails: retired, retiring (a shutdown within warn-days), deprecated, or none."
+    default: retiring
+  warn-days:
+    description: "For fail-on: retiring, the days before a shutdown that count. Default: warn_days in .modelexpiry.yml, else 90."
+    default: ""
+  diff-only:
+    description: "On pull requests, fail only on model IDs in the lines the pull request changes, not on those already there."
+    default: "true"
+  base:
+    description: "The commit diff-only compares to. Default: the pull request's base; empty outside pull requests."
+    default: ${{ github.event.pull_request.base.sha }}
+  directory:
+    description: "The directory to scan."
+    default: "."
+  config:
+    description: "The config file. Default: .modelexpiry.yml in the directory."
+    default: ""
+  sarif-file:
+    description: "Also write a SARIF 2.1.0 report here, for github/codeql-action/upload-sarif."
+    default: ""
+  registry:
+    description: "A mirror of https://modelexpiry.com/registry.json (URL) or a copy of it (path), for networks that cannot reach modelexpiry.com."
+    default: ""
+  version:
+    description: "The modelexpiry CLI version to run."
+    default: "0.1.0"
+
+runs:
+  using: composite
+  steps:
+    - name: Scan for retiring model IDs
+      shell: bash
+      # Inputs reach the script as variables, never spliced into it.
+      env:
+        MODELEXPIRY_INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        MODELEXPIRY_INPUT_WARN_DAYS: ${{ inputs.warn-days }}
+        MODELEXPIRY_INPUT_DIFF_ONLY: ${{ inputs.diff-only }}
+        MODELEXPIRY_INPUT_BASE: ${{ inputs.base }}
+        MODELEXPIRY_INPUT_DIRECTORY: ${{ inputs.directory }}
+        MODELEXPIRY_INPUT_CONFIG: ${{ inputs.config }}
+        MODELEXPIRY_INPUT_SARIF_FILE: ${{ inputs.sarif-file }}
+        MODELEXPIRY_INPUT_REGISTRY: ${{ inputs.registry }}
+        MODELEXPIRY_INPUT_VERSION: ${{ inputs.version }}
+      run: bash "$GITHUB_ACTION_PATH/run.sh"
